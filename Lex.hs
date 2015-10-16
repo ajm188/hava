@@ -21,11 +21,12 @@ tokenize :: String -> [Token]
 tokenize [] = []
 tokenize line@(x:xs)
     | x == ' ' || x == '\n' || x == '\t' = tokenize xs
-    | otherwise = token:tokenize remainder
-    where (token, remainder) = subtokenize [(boolRe, TBool), (intRe, TInt)] line
+    | otherwise = tok:tokenize rem
+    where (tok, rem) = subtokenize [(boolRe, TBool), (intRe, TInt)] line
 
 subtokenize :: [(Regex, (String -> Token))] -> String -> (Token, String)
 subtokenize [] _ = (TErr, "")
-subtokenize ((x,t):xs) s = case result of Nothing -> subtokenize xs s
-                                          (Just(_, m, r, _)) -> (t m, r)
+subtokenize ((x,t):xs) s =
+    case result of Nothing -> subtokenize xs s
+                   (Just(_, m, r, _)) -> (t m, r)
     where result = matchRegexAll x s
