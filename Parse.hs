@@ -1,9 +1,9 @@
 module Parse
-(
+( parseStmts
 ) where
 
-import Control.Applicative hiding (Const)
 import Lex
+import Utils
 
 data Stmt = AssignStmt Expr BinaryOp Expr | ExprStmt Expr
     deriving Show
@@ -27,46 +27,41 @@ parseStmts (x:xs) = (parseStmt x):(parseStmts xs)
 
 parseStmt :: [Token] -> Stmt
 parseStmt (x:[]) = ExprStmt $ parseExpr [x]
-parseStmt stmt@(t@(TOp o):xs)
-    | o == "(" = ExprStmt $ parseExpr stmt
-parseStmt stmt@(x:t@(TOp o):xs)
-    | o == "+" || o == "-" = ExprStmt $ parseExpr stmt
-    | o == "*" || o == "/" || o == "%" = ExprStmt $ parseTerm stmt
-    | o == "=" = parseAssignment x xs
+parseStmt stmt@(x:(TOp "="):xs) = parseAssignment x xs
+parseStmt stmt = ExprStmt $ parseExpr stmt
 
 parseAssignment :: Token -> [Token] -> Stmt
-parseAssignment x@(TIdent _) rhs = AssignStmt (parseVar x) Assign (parseExprOrTerm rhs)
-
-parseExprOrTerm :: [Token] -> Expr
-parseExprOrTerm all@(x:[]) = parseExpr all
-parseExprOrTerm all@((TDelim d):_)
-    | d == "(" = parseExpr all
-parseExprOrTerm all@(x:(TOp o):_)
-    | o == "+" || o == "-" = parseExpr all
-    | o == "*" || o == "/" || o == "%" = parseTerm all
+parseAssignment (TIdent var) rhs = AssignStmt (Var var) Assign (parseExpr rhs)
 
 parseExpr :: [Token] -> Expr
-parseExpr ((TInt i):[]) = Const (read i)
-parseExpr (var@(TIdent _):[]) = parseVar var
-parseExpr (ld@(TDelim d):xs)
-    | d == "(" = case body of
-                    Just(e) -> case rem of
-                                Nothing -> parseExpr e
-                                Just([]) -> parseExpr e
-                                Just((t@(TOp o):ts)) -> BinaryExpr (parseExpr e) (binOp t) (parseExpr ts)
-    where target = matchingDelim $ delim ld
-          body = beforeDelim target xs
-          rem = afterDelim target xs
-parseExpr (x:t@(TOp o):xs)
-    | o == "+" || o == "-" = BinaryExpr (parseExpr [x]) (binOp t) (parseTerm xs)
+-- E -> ( E )
+parseExpr (ld@(TDelim "("):xs) =
+    case split of
+        Just([body, _, []]) -> parseExpr body
+        Just([body, _, rest]) -> parseExpr body -- TODO
+    where split = splitFirst [matchingDelim ld] xs
+-- E -> T | E + E | E - E
+parseExpr e =
+    case split of
+        Nothing -> parseTerm e
+        Just([lhs, [op], rhs]) -> BinaryExpr (parseExpr lhs) (binOp op) (parseExpr rhs)
+    where split = splitFirst [TOp "+", TOp "-"] e
 
 parseTerm :: [Token] -> Expr
-parseTerm (x:t@(TOp o):xs)
-    | o == "*" || o == "/" || o == "%" = BinaryExpr (parseExpr [x]) (binOp t) (parseExpr xs)
-parseTerm x = parseExpr x
+-- T -> F | T * T | T / T | T % T
+parseTerm t =
+    case split of
+        Nothing -> parseFactor t
+        Just([lhs, [op], rhs]) -> BinaryExpr (parseTerm lhs) (binOp op) (parseTerm rhs)
+    where split = splitFirst [TOp "*", TOp "/", TOp "%"] t
 
-parseVar :: Token -> Expr
-parseVar (TIdent v) = Var v
+parseFactor :: [Token] -> Expr
+-- F -> Const
+parseFactor ((TInt i):[]) = Const $ read i
+-- F -> Var
+parseFactor ((TIdent var):[]) = Var var
+-- F -> E
+parseFactor f = parseExpr f
 
 binOp :: Token -> BinaryOp
 binOp (TOp "+") = Add
@@ -81,21 +76,3 @@ delim (TDelim "(") = LParen
 delim (TDelim ")") = RParen
 delim (TDelim "{") = LCurlyBrace
 delim (TDelim "}") = RCurlyBrace
-
-matchingDelim :: Delim -> Delim
-matchingDelim LParen = RParen
-matchingDelim LCurlyBrace = RCurlyBrace
-
-beforeDelim :: Delim -> [Token] -> Maybe [Token]
-beforeDelim target [] = Nothing
-beforeDelim target (x@(TDelim _):xs)
-    | target == delim x = Just []
-    | otherwise = Nothing
-beforeDelim target (x:xs) = Just(\l -> x:l) <*> beforeDelim target xs
-
-afterDelim :: Delim -> [Token] -> Maybe [Token]
-afterDelim target [] = Nothing
-afterDelim target (x@(TDelim _):xs)
-    | target == delim x = Just xs
-    | otherwise = afterDelim target xs
-afterDelim target (x:xs) = afterDelim target xs
