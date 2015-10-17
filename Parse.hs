@@ -28,8 +28,8 @@ parseStmt stmt@(x:t@(TOp o):xs)
     | o == "=" = parseAssignment x xs
 
 parseAssignment :: Token -> [Token] -> Stmt
-parseAssignment x (x':[]) = AssignStmt (parseExpr [x]) Assign (parseExpr [x'])
-parseAssignment x rem@(x':(TOp o):xs) = AssignStmt (parseExpr [x]) Assign rhs
+parseAssignment x@(TIdent _) (x':[]) = AssignStmt (parseVar x) Assign (parseExpr [x'])
+parseAssignment x@(TIdent _) rem@(x':(TOp o):xs) = AssignStmt (parseVar x) Assign rhs
     where rhs = case o of "+" -> parseExpr rem
                           "-" -> parseExpr rem
                           "*" -> parseTerm rem
@@ -38,7 +38,7 @@ parseAssignment x rem@(x':(TOp o):xs) = AssignStmt (parseExpr [x]) Assign rhs
 
 parseExpr :: [Token] -> Expr
 parseExpr ((TInt i):[]) = Const (read i)
-parseExpr ((TIdent v):[]) = Var v
+parseExpr (var@(TIdent _):[]) = parseVar var
 parseExpr (x:t@(TOp o):xs)
     | o == "+" || o == "-" = BinaryExpr (parseExpr [x]) (binOp t) (parseTerm xs)
 
@@ -46,6 +46,9 @@ parseTerm :: [Token] -> Expr
 parseTerm (x:t@(TOp o):xs)
     | o == "*" || o == "/" || o == "%" = BinaryExpr (parseExpr [x]) (binOp t) (parseExpr xs)
 parseTerm x = parseExpr x
+
+parseVar :: Token -> Expr
+parseVar (TIdent v) = Var v
 
 binOp :: Token -> BinaryOp
 binOp (TOp "+") = Add
