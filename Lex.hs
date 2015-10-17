@@ -10,6 +10,8 @@ data Token =
     TInt String |
     TOp String |
     TIdent String |
+    TDelim String |
+    TEOL |
     TErr
     deriving Show
 
@@ -20,20 +22,29 @@ opRe = mkRegex ('(':'\\':'+':'|':'\\':'*':"|=|-|/|%)")
 boolRe = mkRegex "(true|false)\b"
 intRe = mkRegex "([[:digit:]]+)"  -- start with nonnegative integers for now
 identRe = mkRegex "[_a-z][_a-zA-Z0-9]*"
+lineEnding = mkRegexWithOpts ";" True True -- can't use my override here
+delim = mkRegex ('(':'\\':'(':'|':'\\':')':'|':"{|})")
 
-tokenize :: String -> [Token]
+tokenize :: String -> [[Token]]
 tokenize [] = []
-tokenize line@(x:xs)
-    | x == ' ' || x == '\n' || x == '\t' = tokenize xs
-    | otherwise = tok:tokenize rem
-    where (tok, rem) = subtokenize [(opRe, TOp)
-                                   ,(boolRe, TBool)
-                                   ,(intRe, TInt)
-                                   ,(identRe, TIdent)] line
+tokenize s = case match of Nothing -> [tokenizeLine s]
+                           Just(x, _, xs, _) -> tokenizeLine x:tokenize xs
+    where match = matchRegexAll lineEnding s
 
-subtokenize :: [(Regex, (String -> Token))] -> String -> (Token, String)
-subtokenize [] _ = (TErr, "")
-subtokenize ((x,t):xs) s =
-    case result of Nothing -> subtokenize xs s
+tokenizeLine :: String -> [Token]
+tokenizeLine [] = []
+tokenizeLine line@(x:xs)
+    | x == ' ' || x == '\n' || x == '\t' = tokenizeLine xs
+    | otherwise = tok:tokenizeLine rem
+    where (tok, rem) = subtokenizeLine [(opRe, TOp)
+                                       ,(delim, TDelim)
+                                       ,(boolRe, TBool)
+                                       ,(intRe, TInt)
+                                       ,(identRe, TIdent)] line
+
+subtokenizeLine :: [(Regex, (String -> Token))] -> String -> (Token, String)
+subtokenizeLine [] _ = (TErr, "")
+subtokenizeLine ((x,t):xs) s =
+    case result of Nothing -> subtokenizeLine xs s
                    (Just(_, m, r, _)) -> (t m, r)
     where result = matchRegexAll x s
