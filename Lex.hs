@@ -1,6 +1,7 @@
 module Lex
 ( Token(..)
 , tokenize
+, matchingDelim
 ) where
 
 import Text.Regex hiding (mkRegex)
@@ -13,7 +14,11 @@ data Token =
     TDelim String |
     TEOL |
     TErr
-    deriving Show
+    deriving (Eq, Show)
+
+matchingDelim :: Token -> Token
+matchingDelim (TDelim "(") = TDelim ")"
+matchingDelim (TDelim "{") = TDelim "}"
 
 mkRegex :: String -> Regex
 mkRegex s = mkRegexWithOpts ("^" ++ s) True True
