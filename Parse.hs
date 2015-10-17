@@ -35,15 +35,15 @@ parseStmt stmt@(x:t@(TOp o):xs)
     | o == "=" = parseAssignment x xs
 
 parseAssignment :: Token -> [Token] -> Stmt
-parseAssignment x@(TIdent _) (rhs:[]) = AssignStmt (parseVar x) Assign (parseExpr [rhs])
-parseAssignment x@(TIdent _) rhs@(ld@(TDelim d):rem)
-    | d == "(" = AssignStmt (parseVar x) Assign (parseExpr rhs)
-parseAssignment x@(TIdent _) rhs@(x':(TOp o):xs) = AssignStmt (parseVar x) Assign rhs'
-    where rhs' = case o of "+" -> parseExpr rhs
-                           "-" -> parseExpr rhs
-                           "*" -> parseTerm rhs
-                           "/" -> parseTerm rhs
-                           "%" -> parseTerm rhs
+parseAssignment x@(TIdent _) rhs = AssignStmt (parseVar x) Assign (parseExprOrTerm rhs)
+
+parseExprOrTerm :: [Token] -> Expr
+parseExprOrTerm all@(x:[]) = parseExpr all
+parseExprOrTerm all@((TDelim d):_)
+    | d == "(" = parseExpr all
+parseExprOrTerm all@(x:(TOp o):_)
+    | o == "+" || o == "-" = parseExpr all
+    | o == "*" || o == "/" || o == "%" = parseTerm all
 
 parseExpr :: [Token] -> Expr
 parseExpr ((TInt i):[]) = Const (read i)
