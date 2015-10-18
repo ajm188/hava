@@ -35,10 +35,10 @@ parseStmt ((TIdent v):(TOp "="):expr) = AssnStmt (Var v) Eql (parseExpr expr)
 parseStmt ts = ExprStmt $ parseExpr ts
 
 parseExpr :: [Token] -> Expr
-parseExpr tokens = searchWithinParens tokens exprOps parseExpr parseTerm
+parseExpr tokens = searchAroundParens tokens exprOps parseExpr parseTerm
 
 parseTerm :: [Token] -> Expr
-parseTerm tokens = searchWithinParens tokens termOps parseTerm parseFactor
+parseTerm tokens = searchAroundParens tokens termOps parseTerm parseFactor
 
 parseFactor :: [Token] -> Expr
 parseFactor ((TIdent v):[]) = Var v
@@ -48,8 +48,8 @@ parseFactor ((TDelim "("):tokens) =
         Just(inner) -> parseExpr inner
 parseFactor ts = parseExpr ts
 
-searchWithinParens :: [Token] -> [Token] -> ([Token] -> Expr) -> ([Token] -> Expr) -> Expr
-searchWithinParens tokens ops f f' =
+searchAroundParens :: [Token] -> [Token] -> ([Token] -> Expr) -> ([Token] -> Expr) -> Expr
+searchAroundParens tokens ops f f' =
     case split [TDelim "("] tokens of
         Nothing ->
             case splitFirst ops tokens of
