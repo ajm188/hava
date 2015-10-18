@@ -35,31 +35,38 @@ parseStmt ((TIdent v):(TOp "="):expr) = AssnStmt (Var v) Eql (parseExpr expr)
 parseStmt ts = ExprStmt $ parseExpr ts
 
 parseExpr :: [Token] -> Expr
-parseExpr ts =
-    case split [TDelim "("] ts of
-        Nothing ->
-            case splitFirst exprOps ts of
-                Nothing -> parseTerm ts
-                Just([l, [op], r]) ->
-                    BinExpr (parseExpr l) (binOp op) (parseExpr r)
-        Just(([], r)) -> parseExpr r
-        Just((l, r)) ->
-            case splitFirst exprOps l of
-                Nothing -> parseTerm ts
-                Just([l', [op], r']) ->
-                    BinExpr (parseExpr l') (binOp op) (parseExpr $ r' ++ r)
+parseExpr tokens = searchWithinParens tokens exprOps parseExpr parseTerm
 
 parseTerm :: [Token] -> Expr
-parseTerm ts =
-    case split of
-        Nothing -> parseFactor ts
-        Just([l, [o], r]) -> BinExpr (parseTerm l) (binOp o) (parseTerm r)
-    where split = splitFirst termOps ts
+parseTerm tokens = searchWithinParens tokens termOps parseTerm parseFactor
 
 parseFactor :: [Token] -> Expr
 parseFactor ((TIdent v):[]) = Var v
 parseFactor ((TInt i):[]) = Const $ read i
+parseFactor ((TDelim "("):tokens) =
+    case beforeLast [TDelim ")"] tokens of
+        Just(inner) -> parseExpr inner
 parseFactor ts = parseExpr ts
+
+searchWithinParens :: [Token] -> [Token] -> ([Token] -> Expr) -> ([Token] -> Expr) -> Expr
+searchWithinParens tokens ops f f' =
+    case split [TDelim "("] tokens of
+        Nothing ->
+            case splitFirst ops tokens of
+                Nothing -> f' tokens
+                Just([l, [op], r]) -> BinExpr (f l) (binOp op) (f r)
+        Just(([], r)) ->
+            case splitLast [TDelim ")"] tokens of
+                Just(l, []) -> f' tokens
+                Just(l, r) ->
+                    case splitFirst ops r of
+                        Nothing -> f' tokens
+                        Just([l', [op], r']) ->
+                            BinExpr (f $ l ++ l') (binOp op) (f r')
+        Just(l, r) ->
+            case splitFirst ops l of
+                Nothing -> f' tokens
+                Just([l', [op], r']) -> BinExpr (f l') (binOp op) (f $ r' ++ r)
 
 binOp :: Token -> BinOp
 binOp (TOp "+") = Add
