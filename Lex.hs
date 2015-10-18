@@ -25,8 +25,8 @@ mkRegex' :: String -> Regex
 mkRegex' s = mkRegexWithOpts ("^" ++ s) True True
 
 opRe = mkRegex' ('(':'\\':'+':'|':'\\':'*':"|=|-|/|%)")
-keywordRe = mkRegex' "\b(if|else)\b"
-boolRe = mkRegex' "(true|false)\\b"
+keywordRe = mkRegex' "(if|else)"
+boolRe = mkRegex' "(true|false)"
 intRe = mkRegex' "([[:digit:]]+)"  -- start with nonnegative integers for now
 identRe = mkRegex' "[_a-z][_a-zA-Z0-9]*"
 lineEnding = mkRegex ";"
