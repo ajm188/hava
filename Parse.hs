@@ -36,10 +36,18 @@ parseStmt ts = ExprStmt $ parseExpr ts
 
 parseExpr :: [Token] -> Expr
 parseExpr ts =
-    case split of
-        Nothing -> parseTerm ts
-        Just([l, [o], r]) -> BinExpr (parseExpr l) (binOp o) (parseExpr r)
-    where split = splitFirst exprOps ts
+    case split [TDelim "("] ts of
+        Nothing ->
+            case splitFirst exprOps ts of
+                Nothing -> parseTerm ts
+                Just([l, [op], r]) ->
+                    BinExpr (parseExpr l) (binOp op) (parseExpr r)
+        Just(([], r)) -> parseExpr r
+        Just((l, r)) ->
+            case splitFirst exprOps l of
+                Nothing -> parseTerm ts
+                Just([l', [op], r']) ->
+                    BinExpr (parseExpr l') (binOp op) (parseExpr $ r' ++ r)
 
 parseTerm :: [Token] -> Expr
 parseTerm ts =

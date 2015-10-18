@@ -1,8 +1,6 @@
 module Utils
-( splitFirst
-, beforeFirst
-, findFirst
-, afterFirst
+( split
+, splitFirst
 ) where
 
 import Control.Applicative
@@ -20,6 +18,15 @@ splitFirst ms xs =
     where before = beforeFirst ms xs
           match = findFirst ms xs
           after = afterFirst ms xs
+
+splitFirstUntil :: (Eq a) => (a -> Bool) -> [a] -> [a] -> Maybe [[a]]
+splitFirstUntil _ _ [] = Nothing
+
+split :: (Eq a) => [a] -> [a] -> Maybe ([a], [a])
+split _ [] = Nothing
+split ms l@(x:xs)
+    | any (==x) ms = Just([], l)
+    | otherwise = Just(\(a, b) -> (x:a, b)) <*> split ms xs
 
 beforeFirst :: (Eq a) => [a] -> [a] -> Maybe [a]
 beforeFirst _ [] = Nothing
