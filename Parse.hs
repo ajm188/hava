@@ -84,22 +84,20 @@ ifstmt (("if":tokens), ast) =
         ("(":tokens') ->
             let (t, cond) = expr (tokens', Empty)
             in case t of
-                (")":t') ->
-                    case t' of
-                        ("{":t'') ->
-                            let (t1, trueBranch) = block (t'', Empty)
-                            in case t1 of
-                                ("}":t1') ->
-                                    case t1' of
-                                        ("else":"if":t1'') ->
-                                            let (t2, falseBranch) = ifstmt (("if":t1''), Empty)
-                                            in (t2, If cond trueBranch falseBranch)
-                                        ("else":"{":t1'') ->
-                                            let (t2, falseBranch) = block (t1'', Empty)
-                                            in case t2 of
-                                                ("}":t2') ->
-                                                    (t2', If cond trueBranch falseBranch)
-                                        t1'' -> (t1'', If cond trueBranch Empty)
+                (")":"{":t') ->
+                    let (t1, trueBranch) = block (t', Empty)
+                    in case t1 of
+                        ("}":t1') ->
+                            case t1' of
+                                ("else":"if":t1'') ->
+                                    let (t2, falseBranch) = ifstmt (("if":t1''), Empty)
+                                    in (t2, If cond trueBranch falseBranch)
+                                ("else":"{":t1'') ->
+                                    let (t2, falseBranch) = block (t1'', Empty)
+                                    in case t2 of
+                                        ("}":t2') ->
+                                                (t2', If cond trueBranch falseBranch)
+                                    t1'' -> (t1'', If cond trueBranch Empty)
 ifstmt (tokens, ast) = (tokens, ast)
 
 whilestmt :: ([String], AST) -> ([String], AST)
