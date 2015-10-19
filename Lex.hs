@@ -1,25 +1,8 @@
 module Lex
-( Token(..)
-, tokenize
-, matchingDelim
+( tokenize
 ) where
 
 import Text.Regex
-
-data Token =
-    TKeyword String |
-    TBool String |
-    TInt String |
-    TOp String |
-    TIdent String |
-    TDelim String |
-    TEOL |
-    TErr
-    deriving (Eq, Show)
-
-matchingDelim :: Token -> Token
-matchingDelim (TDelim "(") = TDelim ")"
-matchingDelim (TDelim "{") = TDelim "}"
 
 mkRegex' :: String -> Regex
 mkRegex' s = mkRegexWithOpts ("^" ++ s) True True
@@ -32,31 +15,31 @@ identRe = mkRegex' "[_a-z][_a-zA-Z0-9]*"
 lineEnding = mkRegex ";"
 delim = mkRegex' ('(':'\\':'(':'|':'\\':')':'|':"{|})")
 
-tokenize :: String -> [Token]
+tokenize :: String -> [String]
 tokenize [] = []
 tokenize s =
     case matchRegexAll lineEnding normal of
         Nothing -> tokenizeLine normal
-        Just(x, _, xs, _) -> tokenizeLine x ++ TEOL:tokenize xs
+        Just(x, _, xs, _) -> tokenizeLine x ++ ";":tokenize xs
     where normal = removeWeirdness s
 
-tokenizeLine :: String -> [Token]
+tokenizeLine :: String -> [String]
 tokenizeLine [] = []
 tokenizeLine line@(x:xs)
     | x == ' ' || x == '\n' = tokenizeLine xs
     | otherwise = tok:tokenizeLine rem
-    where (tok, rem) = subtokenizeLine [(opRe, TOp)
-                                       ,(keywordRe, TKeyword)
-                                       ,(delim, TDelim)
-                                       ,(boolRe, TBool)
-                                       ,(intRe, TInt)
-                                       ,(identRe, TIdent)] line
+    where (tok, rem) = subtokenizeLine [opRe
+                                       ,keywordRe
+                                       ,delim
+                                       ,boolRe
+                                       ,intRe
+                                       ,identRe] line
 
-subtokenizeLine :: [(Regex, (String -> Token))] -> String -> (Token, String)
-subtokenizeLine [] _ = (TErr, "")
-subtokenizeLine ((x,t):xs) s =
+subtokenizeLine :: [Regex] -> String -> (String, String)
+subtokenizeLine [] _ = ("", "")
+subtokenizeLine (x:xs) s =
     case result of Nothing -> subtokenizeLine xs s
-                   (Just(_, m, r, _)) -> (t m, r)
+                   (Just(_, m, r, _)) -> (m, r)
     where result = matchRegexAll x s
 
 removeWeirdness :: String -> String
