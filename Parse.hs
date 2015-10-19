@@ -1,76 +1,94 @@
-module Parse
-( parseStmts
+{-
+ - THE GRAMMAR
+ -
+ - S -> Stmts
+ -
+ - Stmts -> Stmt Stmts
+ - Stmts -> Stmt
+ -
+ - Stmt -> Assign
+ - Stmt -> If
+ - Stmt -> If <else> If
+ -
+ - Assign -> <ident> <=> Expr
+ -
+ - If -> <if> <(> Expr <)> Block
+ -
+ - Block -> <{> Stmts <}>
+ -
+ - Expr -> Term
+ - Expr -> Expr <+> Expr | Expr <-> Expr
+ -
+ - Term -> Factor
+ - Term -> Term <*> Term | Term </> Term | Term <%> Term
+ -
+ - Factor -> <number>
+ - Factor -> <(> Expr <)>
+-}
+module Parse2
+(
 ) where
 
-import Lex
-import Utils
+import Text.Regex.Base
+import Text.Regex.Posix
 
-data Stmt = ExprStmt Expr | AssnStmt Expr BinOp Expr
+data Token =
+    Number String |
+    Add | Mul
     deriving Show
 
-data Expr =
-    Const Int |
-    Var String |
-    BinExpr Expr BinOp Expr
+data AST =
+    Empty |
+    Leaf Token |
+    BinEx AST AST AST |
+    If Token Token AST Token AST |
+    IfElse Token Token AST Token AST Token
     deriving Show
 
-data BinOp =
-    Add |
-    Sub |
-    Mul |
-    Div |
-    Mod |
-    Eql
-    deriving Show
+-- HELPERS --
+(|>) :: a -> (a -> b) -> b
+(|>) f g = g f
 
-exprOps = [TOp "+", TOp "-"]
-termOps = [TOp "*", TOp "/", TOp "%"]
+peek :: [a] -> Maybe a
+peek [] = Nothing
+peek (x:xs) = Just x
 
-parseStmts :: [[Token]] -> [Stmt]
-parseStmts [] = []
-parseStmts (s:ss) = (parseStmt s):(parseStmts ss)
+consume :: [a] -> [a]
+consume [] = []
+consume (x:xs) = xs
 
-parseStmt :: [Token] -> Stmt
-parseStmt ((TIdent v):(TOp "="):expr) = AssnStmt (Var v) Eql (parseExpr expr)
-parseStmt ts = ExprStmt $ parseExpr ts
+isDigit :: String -> Bool
+isDigit d = d =~ "[0-9]"
 
-parseExpr :: [Token] -> Expr
-parseExpr tokens = searchAroundParens tokens exprOps parseExpr parseTerm
+-- THE GRAMMAR --
+expr :: ([String], AST) -> ([String], AST)
+expr ([], ast) = ([], ast)
+expr (tokens, ast) = (tokens, ast) |> term |> exprOp
 
-parseTerm :: [Token] -> Expr
-parseTerm tokens = searchAroundParens tokens termOps parseTerm parseFactor
+term :: ([String], AST) -> ([String], AST)
+term ([], ast) = ([], ast)
+term (tokens, ast) = (tokens, ast) |> factor |> termOp
 
-parseFactor :: [Token] -> Expr
-parseFactor ((TIdent v):[]) = Var v
-parseFactor ((TInt i):[]) = Const $ read i
-parseFactor ((TDelim "("):tokens) =
-    case beforeLast [TDelim ")"] tokens of
-        Just(inner) -> parseExpr inner
-parseFactor ts = parseExpr ts
+factor :: ([String], AST) -> ([String], AST)
+factor ([], ast) = ([], ast)
+factor (tokens, ast)
+    | Just d <- peek tokens
+    , isDigit d = ((consume tokens), Leaf (Number d))
+    | Just p <- peek tokens
+    , p == "(" = let (t, a) = expr ((consume tokens), Empty)
+                 in case peek t of
+                    Just ")" -> ((consume t), a)
 
-searchAroundParens :: [Token] -> [Token] -> ([Token] -> Expr) -> ([Token] -> Expr) -> Expr
-searchAroundParens tokens ops f f' =
-    case split [TDelim "("] tokens of
-        Nothing ->
-            case splitFirst ops tokens of
-                Nothing -> f' tokens
-                Just([l, [op], r]) -> BinExpr (f l) (binOp op) (f r)
-        Just(([], r)) ->
-            case splitLast [TDelim ")"] tokens of
-                Just(l, []) -> f' tokens
-                Just(l, r) ->
-                    case splitFirst ops r of
-                        Nothing -> f' tokens
-                        Just([l', [op], r']) ->
-                            BinExpr (f $ l ++ l') (binOp op) (f r')
-        Just(l, r) ->
-            case splitFirst ops l of
-                Nothing -> f' tokens
-                Just([l', [op], r']) -> BinExpr (f l') (binOp op) (f $ r' ++ r)
+exprOp :: ([String], AST) -> ([String], AST)
+exprOp (tokens, ast) =
+    case peek tokens of
+        Just o | elem o ["+"] -> let (t, a) = ((consume tokens), ast) |> term
+                                 in (t, BinEx ast (Leaf Add) a) |> exprOp
+        otherwise -> (tokens, ast)
 
-binOp :: Token -> BinOp
-binOp (TOp "+") = Add
-binOp (TOp "-") = Sub
-binOp (TOp "*") = Mul
-binOp (TOp "/") = Div
-binOp (TOp "%") = Mod
+termOp :: ([String], AST) -> ([String], AST)
+termOp (tokens, ast) =
+    case peek tokens of
+        Just o | elem o ["*"] -> let (t, a) = ((consume tokens), ast) |> factor
+                                 in (t, BinEx ast (Leaf Mul) a) |> termOp
+        otherwise -> (tokens, ast)
