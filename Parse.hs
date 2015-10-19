@@ -25,8 +25,10 @@
  - Factor -> <number>
  - Factor -> <(> Expr <)>
 -}
-module Parse2
-(
+module Parse
+( parse
+, AST(..)
+, Token(..)
 ) where
 
 import Text.Regex.Base
