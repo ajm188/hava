@@ -62,6 +62,12 @@ consume (x:xs) = xs
 isDigit :: String -> Bool
 isDigit d = d =~ "[0-9]"
 
+-- MAIN PARSING ROUTINE
+parse :: [String] -> Maybe AST
+parse [] = Nothing
+parse tokens = case expr (tokens, Empty) of ([], a) -> Just a
+                                            (t, _)  -> Nothing
+
 -- THE GRAMMAR --
 expr :: ([String], AST) -> ([String], AST)
 expr ([], ast) = ([], ast)
