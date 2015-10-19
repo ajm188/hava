@@ -8,13 +8,14 @@ import Lex
 import Text.Regex.Base
 import Text.Regex.Posix
 
-keywords = ["if", "else"]
+reservedWords = ["if", "else", "true", "false"]
 exprOps = ["+", "-"]
 termOps = ["*", "/", "%"]
 
 data Token =
     Ident String |
     Number String |
+    Boolean String |
     Add | Sub |
     Mul | Div | Mod
     deriving Show
@@ -41,11 +42,14 @@ consume :: [a] -> [a]
 consume [] = []
 consume (x:xs) = xs
 
-isDigit :: String -> Bool
-isDigit d = d =~ "[0-9]"
+isNumber :: String -> Bool
+isNumber d = d =~ "[0-9]"
 
 isIdent :: String -> Bool
-isIdent i = not (elem i keywords) && i =~ "[a-zA-Z_][a-zA-Z0-9_]*"
+isIdent i = not (elem i reservedWords) && i =~ "[a-zA-Z_][a-zA-Z0-9_]*"
+
+isBoolean :: String -> Bool
+isBoolean b = b =~ "(true|false)"
 
 operator :: String -> Token
 operator "+" = Add
@@ -143,15 +147,14 @@ term (tokens, ast) = (tokens, ast) |> factor |> termOp
 
 factor :: ([String], AST) -> ([String], AST)
 factor ([], ast) = ([], ast)
-factor (tokens, ast)
-    | Just d <- peek tokens
-    , isDigit d = ((consume tokens), Leaf (Number d))
-    | Just i <- peek tokens
-    , isIdent i = ((consume tokens), Leaf (Ident i))
-    | Just p <- peek tokens
-    , p == "(" = let (t, a) = expr ((consume tokens), Empty)
-                 in case peek t of
-                    Just ")" -> ((consume t), a)
+factor ((t:ts), ast)
+    | isNumber t = (ts, Leaf (Number t))
+    | isIdent t = (ts, Leaf (Ident t))
+    | isBoolean t = (ts, Leaf (Boolean t))
+    | t == "(" =
+        let (t, a) = expr (ts, Empty)
+        in case peek t of
+            Just ")" -> ((consume t), a)
 
 exprOp :: ([String], AST) -> ([String], AST)
 exprOp (tokens, ast) =
