@@ -25,6 +25,7 @@ data AST =
     Assign Token AST |
     BinEx AST AST AST |
     If AST AST AST |
+    While AST AST |
     Block [AST]
     deriving Show
 
@@ -71,6 +72,7 @@ stmts tokens =
 stmt :: ([String], AST) -> ([String], AST)
 stmt ([], ast) = ([], ast)
 stmt (tokens@("if":_), ast) = ifstmt (tokens, ast)
+stmt (tokens@("while":_), ast) = whilestmt (tokens, ast)
 stmt (tokens@(t:"=":_), ast)
     | isIdent t = assignStmt (tokens, ast)
 stmt (tokens, ast) = (tokens, ast)
@@ -99,6 +101,18 @@ ifstmt (("if":tokens), ast) =
                                                     (t2', If cond trueBranch falseBranch)
                                         t1'' -> (t1'', If cond trueBranch Empty)
 ifstmt (tokens, ast) = (tokens, ast)
+
+whilestmt :: ([String], AST) -> ([String], AST)
+whilestmt ([], ast) = ([], ast)
+whilestmt (("while":tokens), ast) =
+    case tokens of
+        ("(":tokens') ->
+            let (t, cond) = expr (tokens', Empty)
+            in case t of
+                (")":"{":t') ->
+                    let (t1, body) = block (t', Empty)
+                    in case t1 of
+                        ("}":t1') -> (t1', While cond body)
 
 assignStmt :: ([String], AST) -> ([String], AST)
 assignStmt ([], ast) = ([], ast)
