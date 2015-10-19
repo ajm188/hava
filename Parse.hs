@@ -97,7 +97,7 @@ ifstmt (("if":tokens), ast) =
                                     in case t2 of
                                         ("}":t2') ->
                                                 (t2', If cond trueBranch falseBranch)
-                                    t1'' -> (t1'', If cond trueBranch Empty)
+                                t1'' -> (t1'', If cond trueBranch Empty)
 ifstmt (tokens, ast) = (tokens, ast)
 
 whilestmt :: ([String], AST) -> ([String], AST)
