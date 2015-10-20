@@ -9,15 +9,17 @@ import Text.Regex.Base
 import Text.Regex.Posix
 
 reservedWords = ["if", "else", "true", "false"]
-exprOps = ["+", "-"]
-termOps = ["*", "/", "%"]
+exprOps = ["+", "-", "||"]
+termOps = ["*", "/", "%", "&&", "==", "!=", "<", "<=", ">", ">="]
 
 data Token =
     Ident String |
     Number String |
     Boolean String |
     Add | Sub |
-    Mul | Div | Mod
+    Mul | Div | Mod |
+    And | Or |
+    CmpEq | CmpNE | CmpGT | CmpGE | CmpLT | CmpLE
     deriving Show
 
 data AST =
@@ -57,6 +59,14 @@ operator "-" = Sub
 operator "*" = Mul
 operator "/" = Div
 operator "%" = Mod
+operator "&&" = And
+operator "||" = Or
+operator "==" = CmpEq
+operator "!=" = CmpNE
+operator ">" = CmpGT
+operator ">=" = CmpGE
+operator "<" = CmpLT
+operator "<=" = CmpLE
 
 -- MAIN PARSING ROUTINE
 parse :: [String] -> Maybe [AST]
