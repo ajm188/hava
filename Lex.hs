@@ -7,13 +7,18 @@ import Text.Regex
 mkRegex' :: String -> Regex
 mkRegex' s = mkRegexWithOpts ("^" ++ s) True True
 
-opRe = mkRegex' ('(':'\\':'+':'|':'\\':'*':"|=|-|/|%)")
-keywordRe = mkRegex' "(if|else)"
-boolRe = mkRegex' "(true|false)"
-intRe = mkRegex' "([[:digit:]]+)"  -- start with nonnegative integers for now
-identRe = mkRegex' "[_a-z][_a-zA-Z0-9]*"
-lineEnding = mkRegex ";"
+compOp = mkRegex' "(==|!=|>|>=|<|<=)"
+boolOp = mkRegex' "(&&|\\|\\|)"
+arithOp = mkRegex' ('(':'\\':'+':'|':'\\':'*':"|=|-|/|%)")
+keyword = mkRegex' "(if|else)"
+bool = mkRegex' "(true|false)"
+int = mkRegex' "([[:digit:]]+)"  -- start with nonnegative integers for now
+ident = mkRegex' "[_a-z][_a-zA-Z0-9]*"
 delim = mkRegex' ('(':'\\':'(':'|':'\\':')':'|':"{|})")
+
+regexes = [compOp, boolOp, arithOp, keyword, delim, bool, int, ident]
+
+lineEnding = mkRegex ";"
 
 tokenize :: String -> [String]
 tokenize [] = []
@@ -28,12 +33,7 @@ tokenizeLine [] = []
 tokenizeLine line@(x:xs)
     | x == ' ' || x == '\n' = tokenizeLine xs
     | otherwise = tok:tokenizeLine rem
-    where (tok, rem) = subtokenizeLine [opRe
-                                       ,keywordRe
-                                       ,delim
-                                       ,boolRe
-                                       ,intRe
-                                       ,identRe] line
+    where (tok, rem) = subtokenizeLine regexes line
 
 subtokenizeLine :: [Regex] -> String -> (String, String)
 subtokenizeLine [] _ = ("", "")
