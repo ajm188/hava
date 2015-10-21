@@ -1,8 +1,11 @@
 module Lex
 ( tokenize
+, main
 ) where
 
 import Text.Regex
+
+import IOUtils
 
 mkRegex' :: String -> Regex
 mkRegex' s = mkRegexWithOpts ("^" ++ s) True True
@@ -45,3 +48,7 @@ subtokenizeLine (x:xs) s =
 removeWeirdness :: String -> String
 removeWeirdness [] = []
 removeWeirdness s = subRegex (mkRegex "(\t|\v)") s " "
+
+main = do
+    text <- getInput
+    print $ tokenize $ concat text

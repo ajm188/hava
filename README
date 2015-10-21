@@ -1,0 +1,8 @@
+You can either run the lexer/parser as a standalone unit or as a Unix pipeline.
+
+To get the standalone unit, just run `make Main`. This creates an executable
+called "Main". Then you can do `./Main file1 file2 ...`.
+
+To get the Unix pipeline, just run `make`. This creates executables "Lex" and
+"Parse" (it also creates "Main" but we don't care about that). Then you can
+do `cat file1 file2 ... | ./Lex | ./Parse`.

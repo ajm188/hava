@@ -2,11 +2,13 @@ module Parse
 ( parse
 , AST(..)
 , Token(..)
+, main
 ) where
 
-import Lex
 import Text.Regex.Base
 import Text.Regex.Posix
+
+import IOUtils
 
 reservedWords = ["if", "else", "true", "false"]
 exprOps = ["+", "-", "||"]
@@ -179,3 +181,8 @@ termOp (tokens, ast) =
         Just o | elem o termOps -> let (t, a) = ((consume tokens), ast) |> factor
                                    in (t, BinEx ast (Leaf $ operator o) a) |> termOp
         otherwise -> (tokens, ast)
+
+main = do
+    tokens <- getInput
+    tokens' <- mapM readIO tokens :: IO [[String]]
+    print $ parse $ concat tokens'
