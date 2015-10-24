@@ -149,13 +149,11 @@ block (tokens, ast) =
                 (t', as) = block' t
             in (t', a:as)
 
-expr :: ([String], AST) -> ([String], AST)
-expr ([], ast) = ([], ast)
-expr (tokens, ast) = (tokens, ast) |> term |> exprOp
+expr :: (([String], AST) -> ([String], AST))
+expr = exprOp . term
 
-term :: ([String], AST) -> ([String], AST)
-term ([], ast) = ([], ast)
-term (tokens, ast) = (tokens, ast) |> factor |> termOp
+term :: (([String], AST) -> ([String], AST))
+term = termOp . factor
 
 factor :: ([String], AST) -> ([String], AST)
 factor ([], ast) = ([], ast)
